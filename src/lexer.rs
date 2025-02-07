@@ -9,6 +9,9 @@ pub enum Token {
     LeftParen, RightParen,
     LeftBrace, RightBrace,
     Semicolon,
+    Minus,
+    BitwiseNot,
+    LogicNot,
 }
 
 const KEYWORDS: &[&str] = &[
@@ -45,26 +48,20 @@ pub fn lex(input: &str) -> Vec<Token> {
     while let Some(c) = chars.peek() {
         match c {
             '0'..='9' => tokens.push(Token::Constant(get_number(&mut chars))),
-            '(' => {
-                tokens.push(Token::LeftParen);
+            '(' | ')' | '{' | '}' | ';' | '-' | '~' | '!' => {
+                tokens.push(match c {
+                    '(' => Token::LeftParen,
+                    ')' => Token::RightParen,
+                    '{' => Token::LeftBrace,
+                    '}' => Token::RightBrace,
+                    ';' => Token::Semicolon,
+                    '-' => Token::Minus,
+                    '~' => Token::BitwiseNot,
+                    '!' => Token::LogicNot,
+                    _ => unreachable!(),
+                });
                 chars.next();
-            },
-            ')' => {
-                tokens.push(Token::RightParen);
-                chars.next();
-            },
-            '{' => {
-                tokens.push(Token::LeftBrace);
-                chars.next();
-            },
-            '}' => {
-                tokens.push(Token::RightBrace);
-                chars.next();
-            },
-            ';' => {
-                tokens.push(Token::Semicolon);
-                chars.next();
-            },
+            }
             'a'..='z' | 'A'..='Z' => {
                 let word = get_word(&mut chars);
                 if KEYWORDS.contains(&word.as_str()) {
