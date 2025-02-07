@@ -20,8 +20,16 @@ pub enum Statement {
 }
 
 #[derive(Debug)]
+pub enum UnaryOperator {
+    Negation,
+    BitwiseNot,
+    LogicNot,
+}
+
+#[derive(Debug)]
 pub enum Expression {
     Int(i32),
+    UnaryOperation(UnaryOperator, Box<Expression>),
 }
 
 pub fn parse(tokens: Vec<Token>) -> Program {
@@ -98,6 +106,19 @@ fn parse_expression(tokens: &mut VecDeque<Token>) -> Expression {
     match token {
         Token::Constant(s) => {
             Expression::Int(s.parse().expect("Expected integer"))
+        }
+        Token::Minus | Token::LogicNot | Token::BitwiseNot => {
+            let expr = parse_expression(tokens);
+            let operator = match token {
+                Token::Minus => UnaryOperator::Negation,
+                Token::LogicNot => UnaryOperator::LogicNot,
+                Token::BitwiseNot => UnaryOperator::BitwiseNot,
+                _ => unreachable!(),
+            };
+            Expression::UnaryOperation(
+                operator,
+                Box::new(expr)
+            )
         }
         _ => panic!("Unexpected token {token:?}. Expression expected."),
     }
