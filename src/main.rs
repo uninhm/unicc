@@ -19,8 +19,17 @@ fn main() {
     let contents = fs::read_to_string(filepath).expect("File not found");
 
     let tokens = lexer::lex(&contents);
-    let ast = parser::parse(tokens);
-    let code = codegen::generate(ast);
+    if args.len() >= 3 && args[2] == "-lex" {
+        println!("{:?}", tokens);
+        return;
+    }
 
-    println!("{}", code);
+    let ast = parser::parse(tokens);
+    if args.len() >= 3 && args[2] == "-parse" {
+        println!("{:?}", ast);
+        return;
+    }
+
+    let code = codegen::generate(ast);
+    println!("{}", code.to_string());
 }
