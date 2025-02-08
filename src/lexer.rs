@@ -15,8 +15,8 @@ pub enum Token {
     LogicNot,
     LogicAnd, LogicOr,
     EQ, NEQ,
-    LT, LTE,
-    GT, GTE,
+    LT, LE,
+    GT, GE,
 }
 
 const KEYWORDS: &[&str] = &[
@@ -109,7 +109,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 let c = chars.peek();
                 match c {
                     Some('=') => {
-                        tokens.push(Token::LTE);
+                        tokens.push(Token::LE);
                         chars.next();
                     }
                     _ => tokens.push(Token::LT),
@@ -120,7 +120,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 let c = chars.peek();
                 match c {
                     Some('=') => {
-                        tokens.push(Token::GTE);
+                        tokens.push(Token::GE);
                         chars.next();
                     }
                     _ => tokens.push(Token::GT),
@@ -152,7 +152,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                 chars.next();
                 let c = chars.peek();
                 match c {
-                    Some('|') => {
+                    Some('&') => {
                         tokens.push(Token::LogicAnd);
                         chars.next();
                     }

@@ -122,8 +122,8 @@ fn token_to_binary_operator(token: Token) -> BinaryOperator {
         Token::NEQ => BinaryOperator::NEQ,
         Token::LT => BinaryOperator::LT,
         Token::GT => BinaryOperator::GT,
-        Token::LTE => BinaryOperator::LE,
-        Token::GTE => BinaryOperator::GE,
+        Token::LE => BinaryOperator::LE,
+        Token::GE => BinaryOperator::GE,
         _ => unreachable!(),
     }
 }
@@ -149,7 +149,7 @@ macro_rules! parse_binary_operator {
 parse_binary_operator!(parse_expression, parse_logic_and_expr, Token::LogicOr);
 parse_binary_operator!(parse_logic_and_expr, parse_eq_expr, Token::LogicAnd);
 parse_binary_operator!(parse_eq_expr, parse_rel_expr, Token::EQ | Token::NEQ);
-parse_binary_operator!(parse_rel_expr, parse_add_expr, Token::LT | Token::GT | Token::LTE | Token::GTE);
+parse_binary_operator!(parse_rel_expr, parse_add_expr, Token::LT | Token::GT | Token::LE | Token::GE);
 parse_binary_operator!(parse_add_expr, parse_term, Token::Plus | Token::Minus);
 parse_binary_operator!(parse_term, parse_factor, Token::Times | Token::Divide);
 
