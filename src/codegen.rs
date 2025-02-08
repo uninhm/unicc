@@ -54,7 +54,6 @@ fn generate_stmt(stmt: Statement) -> Code {
             res.append(generate_expr(expr));
             res.add_asm_line("ret");
         }
-        _ => panic!("Statement {:?} code generation not implemented", stmt)
     }
     res
 }
@@ -75,10 +74,23 @@ fn generate_expr(expr: Expression) -> Code {
                     res.add_asm_line("mov $0, %rax");
                     res.add_asm_line("sete %al");
                 }
-                _ => panic!("Unary operator {:?} code generation not implemented", op)
             }
         }
-        _ => panic!("Expression {:?} code generation not implemented", expr)
+        Expression::BinaryOperation(left, op, right) => {
+            res.append(generate_expr(*right));
+            res.add_asm_line("push %rax");
+            res.append(generate_expr(*left));
+            res.add_asm_line("pop %rcx");
+            match op {
+                BinaryOperator::Plus => res.add_asm_line("add %rcx, %rax"),
+                BinaryOperator::Minus => res.add_asm_line("sub %rcx, %rax"),
+                BinaryOperator::Times => res.add_asm_line("imul %rcx, %rax"),
+                BinaryOperator::Divide => {
+                    res.add_asm_line("cqo");
+                    res.add_asm_line("idiv %rcx");
+                }
+            }
+        }
     }
     res
 }
