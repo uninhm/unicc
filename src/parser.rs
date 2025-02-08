@@ -30,6 +30,8 @@ pub enum UnaryOperator {
 pub enum BinaryOperator {
     Plus, Minus,
     Times, Divide,
+    LogicAnd, LogicOr,
+    EQ, NEQ, LT, GT, LE, GE,
 }
 
 #[derive(Debug)]
@@ -108,43 +110,48 @@ fn parse_statement(tokens: &mut VecDeque<Token>) -> Statement {
     }
 }
 
-fn parse_expression(tokens: &mut VecDeque<Token>) -> Expression {
-    let mut left = parse_term(tokens);
-    while matches!(tokens.front(), Some(Token::Plus | Token::Minus)) {
-        let token = tokens.pop_front().unwrap();
-        let operator = match token {
-            Token::Plus => BinaryOperator::Plus,
-            Token::Minus => BinaryOperator::Minus,
-            _ => unreachable!(),
-        };
-        let right = parse_term(tokens);
-        left = Expression::BinaryOperation(
-            Box::new(left),
-            operator,
-            Box::new(right),
-        );
+fn token_to_binary_operator(token: Token) -> BinaryOperator {
+    match token {
+        Token::Plus => BinaryOperator::Plus,
+        Token::Minus => BinaryOperator::Minus,
+        Token::Times => BinaryOperator::Times,
+        Token::Divide => BinaryOperator::Divide,
+        Token::LogicAnd => BinaryOperator::LogicAnd,
+        Token::LogicOr => BinaryOperator::LogicOr,
+        Token::EQ => BinaryOperator::EQ,
+        Token::NEQ => BinaryOperator::NEQ,
+        Token::LT => BinaryOperator::LT,
+        Token::GT => BinaryOperator::GT,
+        Token::LTE => BinaryOperator::LE,
+        Token::GTE => BinaryOperator::GE,
+        _ => unreachable!(),
     }
-    left
 }
 
-fn parse_term(tokens: &mut VecDeque<Token>) -> Expression {
-    let mut left = parse_factor(tokens);
-    while matches!(tokens.front(), Some(Token::Times | Token::Divide)) {
-        let token = tokens.pop_front().unwrap();
-        let operator = match token {
-            Token::Times => BinaryOperator::Times,
-            Token::Divide => BinaryOperator::Divide,
-            _ => unreachable!(),
-        };
-        let right = parse_factor(tokens);
-        left = Expression::BinaryOperation(
-            Box::new(left),
-            operator,
-            Box::new(right),
-        )
+macro_rules! parse_binary_operator {
+    ($func_name:ident, $next_parse:ident, $pattern:pat) => {
+    fn $func_name(tokens: &mut VecDeque<Token>) -> Expression {
+        let mut left = $next_parse(tokens);
+        while matches!(tokens.front(), Some($pattern)) {
+            let token = tokens.pop_front().unwrap();
+            let right = $next_parse(tokens);
+            left = Expression::BinaryOperation(
+                Box::new(left),
+                token_to_binary_operator(token),
+                Box::new(right),
+            );
+        }
+        left
     }
-    left
+    };
 }
+
+parse_binary_operator!(parse_expression, parse_logic_and_expr, Token::LogicOr);
+parse_binary_operator!(parse_logic_and_expr, parse_eq_expr, Token::LogicAnd);
+parse_binary_operator!(parse_eq_expr, parse_rel_expr, Token::EQ | Token::NEQ);
+parse_binary_operator!(parse_rel_expr, parse_add_expr, Token::LT | Token::GT | Token::LTE | Token::GTE);
+parse_binary_operator!(parse_add_expr, parse_term, Token::Plus | Token::Minus);
+parse_binary_operator!(parse_term, parse_factor, Token::Times | Token::Divide);
 
 fn parse_factor(tokens: &mut VecDeque<Token>) -> Expression {
     let token = tokens.pop_front().expect("Expected a factor");

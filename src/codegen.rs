@@ -89,6 +89,7 @@ fn generate_expr(expr: Expression) -> Code {
                     res.add_asm_line("cqo");
                     res.add_asm_line("idiv %rcx");
                 }
+                _ => todo!(),
             }
         }
     }
