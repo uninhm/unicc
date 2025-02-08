@@ -13,6 +13,10 @@ pub enum Token {
     Times, Divide,
     BitwiseNot,
     LogicNot,
+    LogicAnd, LogicOr,
+    EQ, NEQ,
+    LT, LTE,
+    GT, GTE,
 }
 
 const KEYWORDS: &[&str] = &[
@@ -49,22 +53,111 @@ pub fn lex(input: &str) -> Vec<Token> {
     while let Some(c) = chars.peek() {
         match c {
             '0'..='9' => tokens.push(Token::Constant(get_number(&mut chars))),
-            '(' | ')' | '{' | '}' | ';' | '-' | '~' | '!' | '+' | '*' | '/' => {
-                tokens.push(match c {
-                    '(' => Token::LeftParen,
-                    ')' => Token::RightParen,
-                    '{' => Token::LeftBrace,
-                    '}' => Token::RightBrace,
-                    ';' => Token::Semicolon,
-                    '+' => Token::Plus,
-                    '*' => Token::Times,
-                    '/' => Token::Divide,
-                    '-' => Token::Minus,
-                    '~' => Token::BitwiseNot,
-                    '!' => Token::LogicNot,
-                    _ => unreachable!(),
-                });
+            '(' => {
+                tokens.push(Token::LeftParen);
                 chars.next();
+            }
+            ')' => {
+                tokens.push(Token::RightParen);
+                chars.next();
+            }
+            '{' => {
+                tokens.push(Token::LeftBrace);
+                chars.next();
+            }
+            '}' => {
+                tokens.push(Token::RightBrace);
+                chars.next();
+            }
+            ';' => {
+                tokens.push(Token::Semicolon);
+                chars.next();
+            }
+            '+' => {
+                tokens.push(Token::Plus);
+                chars.next();
+            }
+            '*' => {
+                tokens.push(Token::Times);
+                chars.next();
+            }
+            '/' => {
+                tokens.push(Token::Divide);
+                chars.next();
+            }
+            '-' => {
+                tokens.push(Token::Minus);
+                chars.next();
+            }
+            '~' => {
+                tokens.push(Token::BitwiseNot);
+                chars.next();
+            }
+            '!' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('=') => {
+                        tokens.push(Token::NEQ);
+                        chars.next();
+                    }
+                    _ => tokens.push(Token::LogicNot),
+                }
+            }
+            '<' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('=') => {
+                        tokens.push(Token::LTE);
+                        chars.next();
+                    }
+                    _ => tokens.push(Token::LT),
+                }
+            }
+            '>' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('=') => {
+                        tokens.push(Token::GTE);
+                        chars.next();
+                    }
+                    _ => tokens.push(Token::GT),
+                }
+            }
+            '=' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('=') => {
+                        tokens.push(Token::EQ);
+                        chars.next();
+                    }
+                    _ => panic!("Assignment not implemented"),
+                }
+            }
+            '|' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('|') => {
+                        tokens.push(Token::LogicOr);
+                        chars.next();
+                    }
+                    _ => panic!("Bitwise or not implemented"),
+                }
+            }
+            '&' => {
+                chars.next();
+                let c = chars.peek();
+                match c {
+                    Some('|') => {
+                        tokens.push(Token::LogicAnd);
+                        chars.next();
+                    }
+                    _ => panic!("Bitwise and not implemented"),
+                }
             }
             'a'..='z' | 'A'..='Z' => {
                 let word = get_word(&mut chars);
