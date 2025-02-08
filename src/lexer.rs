@@ -9,7 +9,8 @@ pub enum Token {
     LeftParen, RightParen,
     LeftBrace, RightBrace,
     Semicolon,
-    Minus,
+    Plus, Minus,
+    Times, Divide,
     BitwiseNot,
     LogicNot,
 }
@@ -48,13 +49,16 @@ pub fn lex(input: &str) -> Vec<Token> {
     while let Some(c) = chars.peek() {
         match c {
             '0'..='9' => tokens.push(Token::Constant(get_number(&mut chars))),
-            '(' | ')' | '{' | '}' | ';' | '-' | '~' | '!' => {
+            '(' | ')' | '{' | '}' | ';' | '-' | '~' | '!' | '+' | '*' | '/' => {
                 tokens.push(match c {
                     '(' => Token::LeftParen,
                     ')' => Token::RightParen,
                     '{' => Token::LeftBrace,
                     '}' => Token::RightBrace,
                     ';' => Token::Semicolon,
+                    '+' => Token::Plus,
+                    '*' => Token::Times,
+                    '/' => Token::Divide,
                     '-' => Token::Minus,
                     '~' => Token::BitwiseNot,
                     '!' => Token::LogicNot,
