@@ -78,6 +78,7 @@ fn generate_expr(expr: Expression) -> Code {
                 _ => panic!("Unary operator {:?} code generation not implemented", op)
             }
         }
+        _ => panic!("Expression {:?} code generation not implemented", expr)
     }
     res
 }

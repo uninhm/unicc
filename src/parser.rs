@@ -27,9 +27,16 @@ pub enum UnaryOperator {
 }
 
 #[derive(Debug)]
+pub enum BinaryOperator {
+    Plus, Minus,
+    Times, Divide,
+}
+
+#[derive(Debug)]
 pub enum Expression {
     Int(i32),
     UnaryOperation(UnaryOperator, Box<Expression>),
+    BinaryOperation(Box<Expression>, BinaryOperator, Box<Expression>),
 }
 
 pub fn parse(tokens: Vec<Token>) -> Program {
@@ -102,13 +109,56 @@ fn parse_statement(tokens: &mut VecDeque<Token>) -> Statement {
 }
 
 fn parse_expression(tokens: &mut VecDeque<Token>) -> Expression {
-    let token = tokens.pop_front().expect("Expected expression");
+    let mut left = parse_term(tokens);
+    while matches!(tokens.front(), Some(Token::Plus | Token::Minus)) {
+        let token = tokens.pop_front().unwrap();
+        let operator = match token {
+            Token::Plus => BinaryOperator::Plus,
+            Token::Minus => BinaryOperator::Minus,
+            _ => unreachable!(),
+        };
+        let right = parse_term(tokens);
+        left = Expression::BinaryOperation(
+            Box::new(left),
+            operator,
+            Box::new(right),
+        );
+    }
+    left
+}
+
+fn parse_term(tokens: &mut VecDeque<Token>) -> Expression {
+    let mut left = parse_factor(tokens);
+    while matches!(tokens.front(), Some(Token::Times | Token::Divide)) {
+        let token = tokens.pop_front().unwrap();
+        let operator = match token {
+            Token::Times => BinaryOperator::Times,
+            Token::Divide => BinaryOperator::Divide,
+            _ => unreachable!(),
+        };
+        let right = parse_factor(tokens);
+        left = Expression::BinaryOperation(
+            Box::new(left),
+            operator,
+            Box::new(right),
+        )
+    }
+    left
+}
+
+fn parse_factor(tokens: &mut VecDeque<Token>) -> Expression {
+    let token = tokens.pop_front().expect("Expected a factor");
     match token {
         Token::Constant(s) => {
             Expression::Int(s.parse().expect("Expected integer"))
         }
-        Token::Minus | Token::LogicNot | Token::BitwiseNot => {
+        Token::LeftParen => {
             let expr = parse_expression(tokens);
+            expect_token(tokens, Token::RightParen);
+            expr
+        }
+        Token::Minus | Token::LogicNot | Token::BitwiseNot => {
+            let expr = parse_factor(tokens);
             let operator = match token {
                 Token::Minus => UnaryOperator::Negation,
                 Token::LogicNot => UnaryOperator::LogicNot,
@@ -120,6 +170,6 @@ fn parse_expression(tokens: &mut VecDeque<Token>) -> Expression {
                 Box::new(expr)
             )
         }
-        _ => panic!("Unexpected token {token:?}. Expression expected."),
+        _ => panic!("Unexpected token {token:?}. Factor expected."),
     }
 }
