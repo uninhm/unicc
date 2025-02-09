@@ -64,6 +64,8 @@ fn generate_stmt(res: &mut Code, stmt: Statement) {
             generate_expr(res, expr);
             res.add_asm_line("ret");
         }
+        Statement::Declare(name, None) => todo!(),
+        Statement::Declare(name, Some(expr)) => todo!(),
     }
 }
 
@@ -162,5 +164,7 @@ fn generate_expr(res: &mut Code, expr: Expression) {
                 _ => todo!(),
             }
         }
+
+        Expression::Variable(name) => todo!(),
     }
 }
