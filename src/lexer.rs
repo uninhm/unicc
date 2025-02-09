@@ -17,6 +17,7 @@ pub enum Token {
     EQ, NEQ,
     LT, LE,
     GT, GE,
+    Assign,
 }
 
 const KEYWORDS: &[&str] = &[
@@ -134,7 +135,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                         tokens.push(Token::EQ);
                         chars.next();
                     }
-                    _ => panic!("Assignment not implemented"),
+                    _ => tokens.push(Token::Assign),
                 }
             }
             '|' => {
