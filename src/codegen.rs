@@ -2,14 +2,12 @@ use crate::parser::*;
 
 pub struct Code {
     code: String,
-    label_counter: usize,
 }
 
 impl Code {
     pub fn new() -> Self {
         Self {
             code: String::new(),
-            label_counter: 0,
         }
     }
 
@@ -30,12 +28,6 @@ impl Code {
         self.code.push_str(&other.code);
     }
 
-    pub fn get_label(&mut self) -> String {
-        let label = format!(".L{}", self.label_counter);
-        self.label_counter += 1;
-        label
-    }
-
     pub fn add_label(&mut self, label: String) {
         self.add_asm(&label);
         self.add_asm_line(":");
@@ -44,14 +36,23 @@ impl Code {
 
 pub struct CodeGenerator {
     pub code: Code,
+    label_count: usize,
 }
 
 impl CodeGenerator {
     pub fn new() -> Self {
         Self {
             code: Code::new(),
+            label_count: 0,
         }
     }
+
+    pub fn get_label(&mut self) -> String {
+        let label = format!(".L{}", self.label_count);
+        self.label_count += 1;
+        label
+    }
+
 
     pub fn generate(&mut self, program: Program) {
         for func_decl in program.declarations {
@@ -96,8 +97,8 @@ impl CodeGenerator {
                 }
             }
             Expression::BinaryOperation(left, BinaryOperator::LogicOr, right) => {
-                let clause2 = self.code.get_label();
-                let end = self.code.get_label();
+                let clause2 = self.get_label();
+                let end = self.get_label();
                 self.generate_expr(*left);
                 self.code.add_asm_line("cmp $0, %rax");
                 self.code.add_asm_line(&format!("je {}", clause2));
@@ -112,8 +113,8 @@ impl CodeGenerator {
             }
 
             Expression::BinaryOperation(left, BinaryOperator::LogicAnd, right) => {
-                let clause2 = self.code.get_label();
-                let end = self.code.get_label();
+                let clause2 = self.get_label();
+                let end = self.get_label();
                 self.generate_expr(*left);
                 self.code.add_asm_line("cmp $0, %rax");
                 self.code.add_asm_line(&format!("jne {}", clause2));
