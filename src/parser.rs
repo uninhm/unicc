@@ -18,6 +18,7 @@ pub struct FunctionDeclaration {
 pub enum Statement {
     Return(Expression),
     Declare(String, Option<Expression>),
+    Expression(Expression),
 }
 
 #[derive(Debug)]
@@ -101,15 +102,19 @@ fn parse_statements(tokens: &mut VecDeque<Token>) -> Vec<Statement> {
 }
 
 fn parse_statement(tokens: &mut VecDeque<Token>) -> Statement {
-    let token = tokens.pop_front().expect("Expected statement");
+    // println!("Function parse_statement called");
+    // println!("Tokens: {:?}", tokens);
+    let token = tokens.front().expect("Expected statement");
     match token {
         Token::Keyword(s) => match s.as_str() {
             "return" => {
+                tokens.pop_front();
                 let expr = parse_expression(tokens);
                 expect_token(tokens, Token::Semicolon);
                 Statement::Return(expr)
             }
             "int" => {
+                tokens.pop_front();
                 let Token::Identifier(name) = tokens.pop_front().expect("Expected variable name")
                 else { panic!("Unexpected token, identifier expected") };
                 if let Some(Token::Assign) = tokens.front() {
@@ -124,7 +129,11 @@ fn parse_statement(tokens: &mut VecDeque<Token>) -> Statement {
             }
             _ => panic!("Keyword {s} not supported"),
         }
-        _ => panic!("Unexpected token {token:?}"),
+        _ => {
+            let expr = parse_expression(tokens);
+            expect_token(tokens, Token::Semicolon);
+            Statement::Expression(expr)
+        }
     }
 }
 
@@ -150,6 +159,8 @@ fn token_to_binary_operator(token: Token) -> BinaryOperator {
 macro_rules! parse_binary_operator {
     ($func_name:ident, $next_parse:ident, $pattern:pat) => {
     fn $func_name(tokens: &mut VecDeque<Token>) -> Expression {
+        // println!("Function {} called", stringify!($func_name));
+        // println!("Tokens: {:?}", tokens);
         let mut left = $next_parse(tokens);
         while matches!(tokens.front(), Some($pattern)) {
             let token = tokens.pop_front().unwrap();
@@ -165,7 +176,23 @@ macro_rules! parse_binary_operator {
     };
 }
 
-parse_binary_operator!(parse_expression, parse_logic_and_expr, Token::LogicOr | Token::Assign);
+fn parse_expression(tokens: &mut VecDeque<Token>) -> Expression {
+    let left = parse_logic_or_expression(tokens);
+    match tokens.front() {
+        Some(Token::Assign) => {
+            tokens.pop_front();
+            let right = parse_expression(tokens);
+            Expression::BinaryOperation(
+                Box::new(left),
+                BinaryOperator::Assign,
+                Box::new(right),
+            )
+        }
+        _ => left,
+    }
+}
+
+parse_binary_operator!(parse_logic_or_expression, parse_logic_and_expr, Token::LogicOr);
 parse_binary_operator!(parse_logic_and_expr, parse_eq_expr, Token::LogicAnd);
 parse_binary_operator!(parse_eq_expr, parse_rel_expr, Token::EQ | Token::NEQ);
 parse_binary_operator!(parse_rel_expr, parse_add_expr, Token::LT | Token::GT | Token::LE | Token::GE);
