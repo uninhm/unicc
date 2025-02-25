@@ -42,129 +42,139 @@ impl Code {
     }
 }
 
-pub fn generate(program: Program) -> Code {
-    let mut res = Code::new();
-    for func_decl in program.declarations {
-        generate_func_decl(&mut res, func_decl);
-    }
-    res
+pub struct CodeGenerator {
+    pub code: Code,
 }
 
-fn generate_func_decl(res: &mut Code, func_decl: FunctionDeclaration) {
-    res.add_asm_line(&format!(".globl {}", func_decl.name));
-    res.add_asm_line(&format!("{}:", func_decl.name));
-    for stmt in func_decl.body {
-        generate_stmt(res, stmt);
-    }
-}
-
-fn generate_stmt(res: &mut Code, stmt: Statement) {
-    match stmt {
-        Statement::Return(expr) => {
-            generate_expr(res, expr);
-            res.add_asm_line("ret");
+impl CodeGenerator {
+    pub fn new() -> Self {
+        Self {
+            code: Code::new(),
         }
-        Statement::Declare(name, None) => todo!(),
-        Statement::Declare(name, Some(expr)) => todo!(),
     }
-}
 
-fn generate_expr(res: &mut Code, expr: Expression) {
-    match expr {
-        Expression::Int(x) => {
-            res.add_asm_line(&format!("mov ${}, %rax", x));
+    pub fn generate(&mut self, program: Program) {
+        for func_decl in program.declarations {
+            self.generate_func_decl(func_decl);
         }
-        Expression::UnaryOperation(op, expr) => {
-            generate_expr(res, *expr);
-            match op {
-                UnaryOperator::Negation => res.add_asm_line("neg %rax"),
-                UnaryOperator::BitwiseNot => res.add_asm_line("not %rax"),
-                UnaryOperator::LogicNot => {
-                    res.add_asm_line("cmp $0, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("sete %al");
+    }
+
+    fn generate_func_decl(&mut self, func_decl: FunctionDeclaration) {
+        self.code.add_asm_line(&format!(".globl {}", func_decl.name));
+        self.code.add_asm_line(&format!("{}:", func_decl.name));
+        for stmt in func_decl.body {
+            self.generate_stmt(stmt);
+        }
+    }
+
+    fn generate_stmt(&mut self, stmt: Statement) {
+        match stmt {
+            Statement::Return(expr) => {
+                self.generate_expr(expr);
+                self.code.add_asm_line("ret");
+            }
+            Statement::Declare(name, None) => todo!(),
+            Statement::Declare(name, Some(expr)) => todo!(),
+        }
+    }
+
+    fn generate_expr(&mut self, expr: Expression) {
+        match expr {
+            Expression::Int(x) => {
+                self.code.add_asm_line(&format!("mov ${}, %rax", x));
+            }
+            Expression::UnaryOperation(op, expr) => {
+                self.generate_expr(*expr);
+                match op {
+                    UnaryOperator::Negation => self.code.add_asm_line("neg %rax"),
+                    UnaryOperator::BitwiseNot => self.code.add_asm_line("not %rax"),
+                    UnaryOperator::LogicNot => {
+                        self.code.add_asm_line("cmp $0, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("sete %al");
+                    }
                 }
             }
-        }
-        Expression::BinaryOperation(left, BinaryOperator::LogicOr, right) => {
-            let clause2 = res.get_label();
-            let end = res.get_label();
-            generate_expr(res, *left);
-            res.add_asm_line("cmp $0, %rax");
-            res.add_asm_line(&format!("je {}", clause2));
-            res.add_asm_line("mov $1, %rax");
-            res.add_asm_line(&format!("jmp {}", end));
-            res.add_label(clause2);
-            generate_expr(res, *right);
-            res.add_asm_line("cmp $0, %rax");
-            res.add_asm_line("mov $0, %rax");
-            res.add_asm_line("setne %al");
-            res.add_label(end);
-        }
-
-        Expression::BinaryOperation(left, BinaryOperator::LogicAnd, right) => {
-            let clause2 = res.get_label();
-            let end = res.get_label();
-            generate_expr(res, *left);
-            res.add_asm_line("cmp $0, %rax");
-            res.add_asm_line(&format!("jne {}", clause2));
-            res.add_asm_line("mov $0, %rax");
-            res.add_asm_line(&format!("jmp {}", end));
-            res.add_label(clause2);
-            generate_expr(res, *right);
-            res.add_asm_line("cmp $0, %rax");
-            res.add_asm_line("mov $0, %rax");
-            res.add_asm_line("setne %al");
-            res.add_label(end);
-        }
-
-        Expression::BinaryOperation(left, op, right) => {
-            generate_expr(res, *right);
-            res.add_asm_line("push %rax");
-            generate_expr(res, *left);
-            res.add_asm_line("pop %rcx");
-            match op {
-                BinaryOperator::Plus => res.add_asm_line("add %rcx, %rax"),
-                BinaryOperator::Minus => res.add_asm_line("sub %rcx, %rax"),
-                BinaryOperator::Times => res.add_asm_line("imul %rcx, %rax"),
-                BinaryOperator::Divide => {
-                    res.add_asm_line("cqo");
-                    res.add_asm_line("idiv %rcx");
-                }
-                BinaryOperator::EQ => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("sete %al");
-                }
-                BinaryOperator::NEQ => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("setne %al");
-                }
-                BinaryOperator::LT => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("setl %al");
-                }
-                BinaryOperator::GT => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("setg %al");
-                }
-                BinaryOperator::LE => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("setle %al");
-                }
-                BinaryOperator::GE => {
-                    res.add_asm_line("cmp %rcx, %rax");
-                    res.add_asm_line("mov $0, %rax");
-                    res.add_asm_line("setge %al");
-                }
-                _ => todo!(),
+            Expression::BinaryOperation(left, BinaryOperator::LogicOr, right) => {
+                let clause2 = self.code.get_label();
+                let end = self.code.get_label();
+                self.generate_expr(*left);
+                self.code.add_asm_line("cmp $0, %rax");
+                self.code.add_asm_line(&format!("je {}", clause2));
+                self.code.add_asm_line("mov $1, %rax");
+                self.code.add_asm_line(&format!("jmp {}", end));
+                self.code.add_label(clause2);
+                self.generate_expr(*right);
+                self.code.add_asm_line("cmp $0, %rax");
+                self.code.add_asm_line("mov $0, %rax");
+                self.code.add_asm_line("setne %al");
+                self.code.add_label(end);
             }
-        }
 
-        Expression::Variable(name) => todo!(),
+            Expression::BinaryOperation(left, BinaryOperator::LogicAnd, right) => {
+                let clause2 = self.code.get_label();
+                let end = self.code.get_label();
+                self.generate_expr(*left);
+                self.code.add_asm_line("cmp $0, %rax");
+                self.code.add_asm_line(&format!("jne {}", clause2));
+                self.code.add_asm_line("mov $0, %rax");
+                self.code.add_asm_line(&format!("jmp {}", end));
+                self.code.add_label(clause2);
+                self.generate_expr(*right);
+                self.code.add_asm_line("cmp $0, %rax");
+                self.code.add_asm_line("mov $0, %rax");
+                self.code.add_asm_line("setne %al");
+                self.code.add_label(end);
+            }
+
+            Expression::BinaryOperation(left, op, right) => {
+                self.generate_expr(*right);
+                self.code.add_asm_line("push %rax");
+                self.generate_expr(*left);
+                self.code.add_asm_line("pop %rcx");
+                match op {
+                    BinaryOperator::Plus => self.code.add_asm_line("add %rcx, %rax"),
+                    BinaryOperator::Minus => self.code.add_asm_line("sub %rcx, %rax"),
+                    BinaryOperator::Times => self.code.add_asm_line("imul %rcx, %rax"),
+                    BinaryOperator::Divide => {
+                        self.code.add_asm_line("cqo");
+                        self.code.add_asm_line("idiv %rcx");
+                    }
+                    BinaryOperator::EQ => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("sete %al");
+                    }
+                    BinaryOperator::NEQ => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("setne %al");
+                    }
+                    BinaryOperator::LT => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("setl %al");
+                    }
+                    BinaryOperator::GT => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("setg %al");
+                    }
+                    BinaryOperator::LE => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("setle %al");
+                    }
+                    BinaryOperator::GE => {
+                        self.code.add_asm_line("cmp %rcx, %rax");
+                        self.code.add_asm_line("mov $0, %rax");
+                        self.code.add_asm_line("setge %al");
+                    }
+                    _ => todo!(),
+                }
+            }
+
+            Expression::Variable(name) => todo!(),
+        }
     }
 }

@@ -29,6 +29,7 @@ fn main() {
         return;
     }
 
-    let code = codegen::generate(ast);
-    println!("{}", code.to_string());
+    let mut codegenerator = codegen::CodeGenerator::new();
+    codegenerator.generate(ast);
+    println!("{}", codegenerator.code.to_string());
 }
