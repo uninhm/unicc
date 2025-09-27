@@ -1,3 +1,4 @@
+use core::option::Option::None;
 use std::collections::HashMap;
 
 use crate::parser::*;
@@ -112,7 +113,7 @@ impl CodeGenerator {
         }
     }
 
-    fn generate_func_decl(&mut self, parent_scope: &mut Scope, func_decl: FunctionDeclaration) {
+    fn generate_func_decl(&mut self, parent_scope: &Scope, func_decl: FunctionDeclaration) {
         let mut scope = Scope::from_parent(parent_scope);
         self.code.add_asm_line(&format!(".globl {}", func_decl.name));
         self.code.add_asm_line(&format!("{}:", func_decl.name));
@@ -258,7 +259,7 @@ impl CodeGenerator {
                         self.code.add_asm_line("mov $0, %rax");
                         self.code.add_asm_line("setge %al");
                     }
-                    _ => unreachable!(),
+                    _ => unimplemented!(),
                 }
             }
 
