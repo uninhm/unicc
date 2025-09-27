@@ -37,13 +37,13 @@ impl Code {
 }
 
 #[derive(Clone)]
-pub struct Scope {
-    pub parent: Option<Box<Scope>>,
+pub struct Scope<'a> {
+    pub parent: Option<&'a Scope<'a>>,
     pub symbols: HashMap<String, i64>,
     pub stack_index: i64,
 }
 
-impl Scope {
+impl<'a> Scope<'a> {
     pub fn new() -> Self {
         Self {
             parent: None,
@@ -52,9 +52,9 @@ impl Scope {
         }
     }
 
-    pub fn from_parent(parent: Scope) -> Self {
+    pub fn from_parent(parent: &'a Scope) -> Self {
         Self {
-            parent: Some(Box::new(parent)),
+            parent: Some(parent),
             symbols: HashMap::new(),
             stack_index: -4,
         }
@@ -113,7 +113,7 @@ impl CodeGenerator {
     }
 
     fn generate_func_decl(&mut self, parent_scope: &mut Scope, func_decl: FunctionDeclaration) {
-        let mut scope = Scope::from_parent(parent_scope.clone());
+        let mut scope = Scope::from_parent(parent_scope);
         self.code.add_asm_line(&format!(".globl {}", func_decl.name));
         self.code.add_asm_line(&format!("{}:", func_decl.name));
         self.code.add_asm_line("push %rbp");
