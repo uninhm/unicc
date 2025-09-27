@@ -171,7 +171,7 @@ pub fn lex(input: &str) -> Vec<Token> {
             ' ' | '\t' | '\n' => {
                 chars.next();
             },
-            _ => panic!("Unexpected character: '{}'", c),
+            _ => panic!("Unexpected character: '{c}'"),
         }
     }
     tokens

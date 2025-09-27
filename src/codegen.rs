@@ -81,7 +81,7 @@ impl<'a> Scope<'a> {
         if let Some(offset) = self.symbols.get(name) {
             *offset
         } else {
-            panic!("Symbol {} not found", name);
+            panic!("Symbol {name} not found");
         }
     }
 }
@@ -145,7 +145,7 @@ impl CodeGenerator {
                 scope.add_symbol(name);
                 self.generate_expr(scope, expr);
                 self.code.add_asm_line("sub $4, %rsp");
-                self.code.add_asm_line(&format!("mov %eax, {}(%rbp)", offset));
+                self.code.add_asm_line(&format!("mov %eax, {offset}(%rbp)"));
             }
             Statement::Expression(expr) => {
                 self.generate_expr(scope, expr);
@@ -156,7 +156,7 @@ impl CodeGenerator {
     fn generate_expr(&mut self, scope: &mut Scope, expr: Expression) {
         match expr {
             Expression::Int(x) => {
-                self.code.add_asm_line(&format!("mov ${}, %rax", x));
+                self.code.add_asm_line(&format!("mov ${x}, %rax"));
             }
             Expression::UnaryOperation(op, expr) => {
                 self.generate_expr(scope, *expr);
@@ -175,9 +175,9 @@ impl CodeGenerator {
                 let end = self.get_label();
                 self.generate_expr(scope, *left);
                 self.code.add_asm_line("cmp $0, %rax");
-                self.code.add_asm_line(&format!("je {}", clause2));
+                self.code.add_asm_line(&format!("je {clause2}"));
                 self.code.add_asm_line("mov $1, %rax");
-                self.code.add_asm_line(&format!("jmp {}", end));
+                self.code.add_asm_line(&format!("jmp {end}"));
                 self.code.add_label(clause2);
                 self.generate_expr(scope, *right);
                 self.code.add_asm_line("cmp $0, %rax");
@@ -191,9 +191,9 @@ impl CodeGenerator {
                 let end = self.get_label();
                 self.generate_expr(scope, *left);
                 self.code.add_asm_line("cmp $0, %rax");
-                self.code.add_asm_line(&format!("jne {}", clause2));
+                self.code.add_asm_line(&format!("jne {clause2}"));
                 self.code.add_asm_line("mov $0, %rax");
-                self.code.add_asm_line(&format!("jmp {}", end));
+                self.code.add_asm_line(&format!("jmp {end}"));
                 self.code.add_label(clause2);
                 self.generate_expr(scope, *right);
                 self.code.add_asm_line("cmp $0, %rax");
@@ -266,7 +266,7 @@ impl CodeGenerator {
             Expression::Variable(name) => {
                 let offset = scope.get_symbol(&name);
                 self.code.add_asm_line("xor %rax, %rax");
-                self.code.add_asm_line(&format!("movl {}(%rbp), %eax", offset));
+                self.code.add_asm_line(&format!("movl {offset}(%rbp), %eax"));
             }
         }
     }

@@ -19,13 +19,13 @@ fn main() {
 
     let tokens = lexer::lex(&contents);
     if args.len() >= 3 && args[2] == "-lex" {
-        println!("{:?}", tokens);
+        println!("{tokens:?}");
         return;
     }
 
     let ast = parser::parse(tokens);
     if args.len() >= 3 && args[2] == "-parse" {
-        println!("{:?}", ast);
+        println!("{ast:?}");
         return;
     }
 
