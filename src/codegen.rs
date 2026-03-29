@@ -1,10 +1,15 @@
-use core::option::Option::None;
 use std::collections::HashMap;
 
 use crate::parser::*;
 
 pub struct Code {
     code: String,
+}
+
+impl ToString for Code {
+    fn to_string(&self) -> String {
+        self.code.clone()
+    }
 }
 
 impl Code {
@@ -21,10 +26,6 @@ impl Code {
     pub fn add_asm_line(&mut self, asm: &str) {
         self.add_asm(asm);
         self.code.push('\n');
-    }
-
-    pub fn to_string(&self) -> String {
-        self.code.clone()
     }
 
     pub fn append(&mut self, other: Self) {
@@ -105,7 +106,6 @@ impl CodeGenerator {
         label
     }
 
-
     pub fn generate(&mut self, program: Program) {
         let mut scope = Scope::new();
         for func_decl in program.declarations {
@@ -115,17 +115,37 @@ impl CodeGenerator {
 
     fn generate_func_decl(&mut self, parent_scope: &Scope, func_decl: FunctionDeclaration) {
         let mut scope = Scope::from_parent(parent_scope);
-        self.code.add_asm_line(&format!(".globl {}", func_decl.name));
+        self.code
+            .add_asm_line(&format!(".globl {}", func_decl.name));
         self.code.add_asm_line(&format!("{}:", func_decl.name));
         self.code.add_asm_line("push %rbp");
         self.code.add_asm_line("mov %rsp, %rbp");
-        for stmt in func_decl.body {
-            self.generate_stmt(&mut scope, stmt);
+        for item in func_decl.body {
+            self.generate_block_item(&mut scope, item);
         }
         self.code.add_asm_line("xor %rax, %rax");
         self.code.add_asm_line("mov %rbp, %rsp");
         self.code.add_asm_line("pop %rbp");
         self.code.add_asm_line("ret");
+    }
+
+    fn generate_block_item(&mut self, scope: &mut Scope, item: BlockItem) {
+        match item {
+            BlockItem::Statement(stmt) => {
+                self.generate_stmt(scope, stmt);
+            }
+            BlockItem::Declare(name, None) => {
+                self.code.add_asm_line("sub $4, %rsp");
+                scope.add_symbol(name);
+            }
+            BlockItem::Declare(name, Some(expr)) => {
+                let offset = scope.stack_index;
+                scope.add_symbol(name);
+                self.generate_expr(scope, expr);
+                self.code.add_asm_line("sub $4, %rsp");
+                self.code.add_asm_line(&format!("mov %eax, {offset}(%rbp)"));
+            }
+        }
     }
 
     fn generate_stmt(&mut self, scope: &mut Scope, stmt: Statement) {
@@ -136,19 +156,22 @@ impl CodeGenerator {
                 self.code.add_asm_line("pop %rbp");
                 self.code.add_asm_line("ret");
             }
-            Statement::Declare(name, None) => {
-                self.code.add_asm_line("sub $4, %rsp");
-                scope.add_symbol(name);
-            }
-            Statement::Declare(name, Some(expr)) => {
-                let offset = scope.stack_index;
-                scope.add_symbol(name);
-                self.generate_expr(scope, expr);
-                self.code.add_asm_line("sub $4, %rsp");
-                self.code.add_asm_line(&format!("mov %eax, {offset}(%rbp)"));
-            }
             Statement::Expression(expr) => {
                 self.generate_expr(scope, expr);
+            }
+            Statement::If(cond, if_stmt, maybe_else_stmt) => {
+                let else_lbl = self.get_label();
+                let end_lbl = self.get_label();
+                self.generate_expr(scope, cond);
+                self.code.add_asm_line("or %rax, %rax");
+                self.code.add_asm_line(&format!("jz {else_lbl}"));
+                self.generate_stmt(scope, *if_stmt);
+                self.code.add_asm_line(&format!("jmp {end_lbl}"));
+                self.code.add_label(else_lbl);
+                if let Some(else_stmt) = maybe_else_stmt {
+                    self.generate_stmt(scope, *else_stmt);
+                }
+                self.code.add_label(end_lbl);
             }
         }
     }
@@ -205,12 +228,8 @@ impl CodeGenerator {
             Expression::BinaryOperation(left, BinaryOperator::Assign, right) => {
                 if let Expression::Variable(name) = *left {
                     self.generate_expr(scope, *right);
-                    self.code.add_asm_line(
-                        &format!(
-                            "movl %eax, {}(%rbp)",
-                            scope.get_symbol(&name)
-                        )
-                    );
+                    self.code
+                        .add_asm_line(&format!("movl %eax, {}(%rbp)", scope.get_symbol(&name)));
                 } else {
                     panic!("Invalid assignment");
                 }
@@ -266,7 +285,8 @@ impl CodeGenerator {
             Expression::Variable(name) => {
                 let offset = scope.get_symbol(&name);
                 self.code.add_asm_line("xor %rax, %rax");
-                self.code.add_asm_line(&format!("movl {offset}(%rbp), %eax"));
+                self.code
+                    .add_asm_line(&format!("movl {offset}(%rbp), %eax"));
             }
         }
     }

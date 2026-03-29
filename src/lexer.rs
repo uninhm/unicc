@@ -1,28 +1,37 @@
-use std::str::Chars;
 use std::iter::Peekable;
+use std::str::Chars;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    Keyword(String),
+    ReturnKW,
+    IntKW,
+    IfKW,
+    ElseKW,
     Identifier(String),
     Constant(String),
-    LeftParen, RightParen,
-    LeftBrace, RightBrace,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
     Semicolon,
-    Plus, Minus,
-    Times, Divide,
+    Plus,
+    Minus,
+    Times,
+    Divide,
     BitwiseNot,
     LogicNot,
-    LogicAnd, LogicOr,
-    EQ, NEQ,
-    LT, LE,
-    GT, GE,
+    LogicAnd,
+    LogicOr,
+    EQ,
+    NEQ,
+    LT,
+    LE,
+    GT,
+    GE,
     Assign,
+    Colon,
+    QuestionMark,
 }
-
-const KEYWORDS: &[&str] = &[
-    "int", "return",
-];
 
 fn get_number(chars: &mut Peekable<Chars>) -> String {
     let mut number = String::new();
@@ -146,7 +155,7 @@ pub fn lex(input: &str) -> Vec<Token> {
                         tokens.push(Token::LogicOr);
                         chars.next();
                     }
-                    _ => panic!("Bitwise or not implemented"),
+                    _ => unimplemented!("Bitwise or not implemented"),
                 }
             }
             '&' => {
@@ -157,20 +166,22 @@ pub fn lex(input: &str) -> Vec<Token> {
                         tokens.push(Token::LogicAnd);
                         chars.next();
                     }
-                    _ => panic!("Bitwise and not implemented"),
+                    _ => unimplemented!("Bitwise and not implemented"),
                 }
             }
             'a'..='z' | 'A'..='Z' => {
                 let word = get_word(&mut chars);
-                if KEYWORDS.contains(&word.as_str()) {
-                    tokens.push(Token::Keyword(word));
-                } else {
-                    tokens.push(Token::Identifier(word));
-                }
+                tokens.push(match word.as_str() {
+                    "if" => Token::IfKW,
+                    "else" => Token::ElseKW,
+                    "return" => Token::ReturnKW,
+                    "int" => Token::IntKW,
+                    _ => Token::Identifier(word),
+                });
             }
             ' ' | '\t' | '\n' => {
                 chars.next();
-            },
+            }
             _ => panic!("Unexpected character: '{c}'"),
         }
     }
